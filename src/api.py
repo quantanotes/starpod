@@ -1,7 +1,7 @@
 from fastapi import APIRouter, FastAPI
 from starlette.responses import StreamingResponse
-from model import Model
-
+from .logger import logger
+from .model import Model
 
 class API:
     def __init__(self, model: Model):
@@ -18,4 +18,5 @@ class API:
         uvicorn.run(self._app, host=host, port=port)
 
     async def _generate(self, prompt: str) -> StreamingResponse:
+        logger.info(f'Recieved prompt {prompt}')
         return StreamingResponse(self._model.generate(prompt), media_type='text/event-stream')

@@ -1,0 +1,6 @@
+[submodule "src/models/exllama"]
+	path = src/models/exllama
+	url = https://github.com/turboderp/exllama.git
+[submodule "libs/exllama"]
+	path = libs/exllama
+	url = https://github.com/turboderp/exllama.git

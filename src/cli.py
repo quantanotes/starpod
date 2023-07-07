@@ -1,5 +1,8 @@
+import os
 import argparse
-from pod import Pod
+from .download import download
+from .logger import logger
+from .pod import Pod
 
 class CLI:
     def __init__(self):
@@ -14,7 +17,7 @@ class CLI:
         run_parser.add_argument('weights', type=str, help='Weights')
 
         download_parser = subparsers.add_parser('download', help='Download weights from hugging face')
-        download_parser
+        download_parser.add_argument('name', help='Name of the hugging face repo to download from')
 
         args = parser.parse_args()
 
@@ -25,17 +28,21 @@ class CLI:
 
     def _run(self, args: argparse.Namespace):
         model = None
+        weights = os.path.join("./weights/", args.weights)
+        if not os.path.exists(weights):
+            logger.error(f"No weights at folder {weights}")
+            
         match args.model:
             case "test":
-                from models.test_model import TestModel
-                model = TestModel(args.weights)
+                from .models.test_model import TestModel
+                model = TestModel(weights)
             case "gptq-llama":
-                from models.gptq_llama import GPTQLLaMa
-                model = GPTQLLaMa(args.weights)
+                from .models.gptq_llama import GPTQLLaMa
+                model = GPTQLLaMa(weights)
             case _:
-                print(f"No model named: {args.model}")
+                logger.error(f"No model named {args.model}")
 
         Pod(model)
 
     def _download(self, args):
-        pass
+        download(args.name) 
