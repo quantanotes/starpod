@@ -9,7 +9,6 @@ from src.model import Model
 
 class GPTQLLaMa(Model):
     def __init__(self, dir: str):
-        logger.info(f"Loading weights from {dir}")
         config_path = os.path.join(dir, "config.json")
         st_path = os.path.join(dir, "*.safetensors")
         tokeniser_path = os.path.join(dir, "tokenizer.model")
