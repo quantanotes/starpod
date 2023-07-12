@@ -14,5 +14,5 @@ class VLLM(Model):
     async def generate(self, prompt: str, args) -> AsyncGenerator[str, None]:
         params = SamplingParams(temperature=args.temparatue, top_p=args.top_p, top_k=args.top_k, max_tokens=args.max_tokens)
         generator = self.engine.generate(prompt, params)
-        async for token in range(generator):
-            pass
+        async for output in generator:
+            yield output.outputs[0].text

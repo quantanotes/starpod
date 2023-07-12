@@ -7,7 +7,7 @@ class GeneratorArgs:
     temperature: float = 0.8
     top_k: float = 1
     top_p: float = 0.8
-    max_tokens: 256
+    max_tokens: int = 256
 
 class Model(ABC):
     @abstractmethod
