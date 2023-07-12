@@ -5,7 +5,7 @@ from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import StreamingResponse
 from starlette.status import HTTP_400_BAD_REQUEST
-from .model import Model
+from .model import Model, GeneratorArgs
 
 class API:
     def __init__(self, model: Model):
@@ -23,10 +23,23 @@ class API:
 
     async def _generate(self, request: Request) -> StreamingResponse:
         if request.method == 'GET':
-            prompt = request.query_params.get('prompt')
+            params = request.query_params
+            prompt = params.get('prompt')
+            args = GeneratorArgs(
+                temperature=params.get('temperature', GeneratorArgs.temperature),
+                top_k=params.get('top_k', GeneratorArgs.top_k),
+                top_p=params.get('top_p', GeneratorArgs.top_p),
+                max_tokens=params.get('max_tokens', GeneratorArgs.max_tokens)
+            )
         elif request.method == 'POST':
             body: dict = await request.json()
             prompt = body.get('prompt')
+            args = GeneratorArgs(
+                temperature=body.get('temperature', GeneratorArgs.temperature),
+                top_k=body.get('top_k', GeneratorArgs.top_k),
+                top_p=body.get('top_p', GeneratorArgs.top_p),
+                max_tokens=body.get('max_tokens', GeneratorArgs.max_tokens)
+            )
 
         if not prompt:
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Prompt is required")
@@ -38,4 +51,4 @@ class API:
 
         _ = BackgroundTask(abort)
 
-        return StreamingResponse(self._model.generate(prompt), media_type='text/event-stream')
+        return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream')
