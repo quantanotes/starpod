@@ -1,6 +1,5 @@
 import requests
-
-url = 'http://localhost:8080/generate'
+url = 'http://localhost:8080/'
 headers = {
     'Content-Type': 'application/json',
     'Accept': 'text/event-stream',
@@ -11,14 +10,14 @@ data = {
     "prompt": "hey there"
 }
 
-def print_sse_stream():
-    response = requests.post(url, stream=True, headers=headers, json=data)
 
-    print(response.status_code)
+def print_sse_stream():
+    response = requests.post(url, stream=True, headers=headers)
 
     if response.status_code == 200:
-        for line in response.iter_content():
+        for line in response.iter_content(decode_unicode=True):
             if line:
                 print(line)
+
 
 print_sse_stream()

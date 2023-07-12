@@ -4,3 +4,6 @@
 [submodule "libs/exllama"]
 	path = libs/exllama
 	url = https://github.com/turboderp/exllama.git
+[submodule "libs/vllm"]
+	path = libs/vllm
+	url = https://github.com/vllm-project/vllm.git
