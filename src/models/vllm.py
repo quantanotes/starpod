@@ -2,14 +2,14 @@ from typing import AsyncGenerator
 from libs.vllm.vllm.engine.arg_utils import AsyncEngineArgs
 from libs.vllm.vllm.engine.async_llm_engine import AsyncLLMEngine
 from libs.vllm.vllm import SamplingParams
-from src.model import Model
+from src.model import Model, GeneratorArgs
 
 class VLLM(Model):
     def __init__(self, dir: str, weights: str):
         args = AsyncEngineArgs(weights, download_dir=dir)
         self.engine = AsyncLLMEngine.from_engine_args(args)
 
-    async def generate(self, prompt: str, args) -> AsyncGenerator[str, None]:
+    async def generate(self, prompt: str, args: GeneratorArgs = GeneratorArgs()) -> AsyncGenerator[str, None]:
         params = SamplingParams(temperature=args.temparatue, top_p=args.top_p, top_k=args.top_k, max_tokens=args.max_tokens)
         generator = self.engine.generate(prompt, params)
         async for output in generator:
