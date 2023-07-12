@@ -6,9 +6,7 @@ from src.model import Model
 
 class VLLM(Model):
     def __init__(self, dir: str, weights: str):
-        args = AsyncEngineArgs()
-        args.download_dir = dir
-        args.model = weights
+        args = AsyncEngineArgs(weights, download_dir=dir)
         self.engine = AsyncLLMEngine.from_engine_args(args)
 
     async def generate(self, prompt: str, args) -> AsyncGenerator[str, None]:
