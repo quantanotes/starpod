@@ -28,12 +28,15 @@ class CLI:
 
     def _run(self, args: argparse.Namespace):
         model = None
+
         weights = args.weights
-        dir = os.getcwd().join('/weights')
-        full_dir = os.path.join('./weights/', args.weights)
-        if not os.path.exists(weights):
+        dir = os.path.join(os.getcwd(), "weights")
+        full_dir = os.path.join(dir, args.weights)
+
+        if not os.path.exists(full_dir):
             logger.error(f'Weights {weights} are not installed')
-        
+            return
+
         match args.model:
             case 'test':
                 from .models.test_model import TestModel
