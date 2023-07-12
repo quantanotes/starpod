@@ -6,7 +6,7 @@ from src.model import Model
 
 class VLLM(Model):
     def __init__(self, dir: str, weights: str):
-        args = AsyncEngineArgs
+        args = AsyncEngineArgs()
         args.download_dir = dir
         args.model = weights
         self.engine = AsyncLLMEngine.from_engine_args(args)
