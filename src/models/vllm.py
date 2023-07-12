@@ -9,7 +9,7 @@ class VLLM(Model):
         args = AsyncEngineArgs
         args.download_dir = dir
         args.model = weights
-        self.engine = AsyncLLMEngine(args=args)
+        self.engine = AsyncLLMEngine(True, True, args=args)
 
     async def generate(self, prompt: str, args) -> AsyncGenerator[str, None]:
         params = SamplingParams(temperature=args.temparatue, top_p=args.top_p, top_k=args.top_k, max_tokens=args.max_tokens)
