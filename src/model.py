@@ -15,6 +15,10 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    def generate(self, prompt: str, args: GeneratorArgs = GeneratorArgs()) -> Generator[str, None, None] | AsyncGenerator[str, None]:
+    def generate(self, prompt: str, id: str, args: GeneratorArgs = GeneratorArgs()) -> Generator[str, None, None] | AsyncGenerator[str, None]:
+        pass
+
+    @abstractmethod
+    def abort(self, id: str) -> None:
         pass
     

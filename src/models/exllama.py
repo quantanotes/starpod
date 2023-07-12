@@ -22,7 +22,7 @@ class ExLLama(Model):
         self._tokeniser = ExLlamaTokenizer(tokeniser_path)
         self._generator = ExLlamaGenerator(self._model, self._tokeniser, self._cache)
 
-    def generate(self, prompt: str, args) -> Generator[str, None, None]:
+    def generate(self, prompt: str, id: str, args) -> Generator[str, None, None]:
         self._generator.settings = ExLlamaGenerator.Settings(args.temperature, args.top_k, args.top_p)
 
         tokens = self._tokeniser.encode(prompt)
@@ -46,3 +46,6 @@ class ExLLama(Model):
                     yield item
             else:
                 yield decoded_token
+
+    def abort(self, id: str):
+        pass

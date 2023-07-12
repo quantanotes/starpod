@@ -1,4 +1,6 @@
+import uuid
 from fastapi import APIRouter, FastAPI
+from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import StreamingResponse
@@ -28,5 +30,12 @@ class API:
 
         if not prompt:
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Prompt is required")
+
+        id = uuid.uuid4()
+
+        async def abort():
+            await self._model.abort(id)
+
+        _ = BackgroundTask(abort)
 
         return StreamingResponse(self._model.generate(prompt), media_type='text/event-stream')
