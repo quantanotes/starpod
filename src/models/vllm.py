@@ -2,7 +2,7 @@ from typing import AsyncGenerator
 from libs.vllm.vllm.engine.arg_utils import AsyncEngineArgs
 from libs.vllm.vllm.engine.async_llm_engine import AsyncLLMEngine
 from libs.vllm.vllm import SamplingParams
-from model import Model
+from src.model import Model
 
 class VLLM(Model):
     def __init__(self, dir: str, weights: str):
