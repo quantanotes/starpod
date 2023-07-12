@@ -1,4 +1,5 @@
 from typing import AsyncGenerator
+import uuid
 from libs.vllm.vllm.engine.arg_utils import AsyncEngineArgs
 from libs.vllm.vllm.engine.async_llm_engine import AsyncLLMEngine
 from libs.vllm.vllm import SamplingParams
@@ -11,6 +12,6 @@ class VLLM(Model):
 
     async def generate(self, prompt: str, args: GeneratorArgs = GeneratorArgs()) -> AsyncGenerator[str, None]:
         params = SamplingParams(temperature=args.temperature, top_p=args.top_p, top_k=args.top_k, max_tokens=args.max_tokens)
-        generator = self.engine.generate(prompt, params)
+        generator = self.engine.generate(prompt, params, uuid.uuid4())
         async for output in generator:
             yield output.outputs[0].text
