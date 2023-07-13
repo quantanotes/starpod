@@ -49,6 +49,6 @@ class API:
         async def abort():
             await self._model.abort(id)
 
-        _ = BackgroundTask(abort)
+        _ = await BackgroundTask(abort)
 
         return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream')
