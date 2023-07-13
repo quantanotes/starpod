@@ -51,4 +51,4 @@ class API:
 
         task = BackgroundTask(abort)
 
-        return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream', task=task)
+        return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream', background=task)
