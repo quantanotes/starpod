@@ -1,5 +1,4 @@
 import requests
-import path
 import os
 from tqdm import tqdm
 
@@ -19,7 +18,7 @@ def download_file(url: str, path: str):
     progress_bar.close()
 
 def download(name: str):
-    folder = path.join(os.getcwd(), "/weights/")
+    folder = os.path.join(os.getcwd(), "/weights/")
     
     base_url = f"https://huggingface.co/{name}/resolve/main"
     headers = {"User-Agent": "Hugging Face Python"}
