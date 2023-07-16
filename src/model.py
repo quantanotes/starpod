@@ -4,9 +4,9 @@ from typing import AsyncGenerator, Generator
 
 @dataclass
 class GeneratorArgs:
-    temperature: float = 0.8
-    top_k: float = 1
-    top_p: float = 0.8
+    temperature: float = 1
+    top_k: float = -1
+    top_p: float = 1
     max_tokens: int = 256
 
 class Model(ABC):
