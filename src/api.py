@@ -3,7 +3,7 @@ from fastapi import APIRouter, FastAPI
 from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
-from starlette.responses import StreamingResponse
+from starlette.responses import Response, StreamingResponse
 from starlette.status import HTTP_400_BAD_REQUEST
 from .model import Model, GeneratorArgs
 
@@ -12,6 +12,7 @@ class API:
         self._model = model
 
         router = APIRouter()
+        router.add_api_route('/', self._ping, methods=['POST', 'GET'])
         router.add_api_route('/generate', self._generate, methods=['POST', 'GET'])
 
         self._app = FastAPI()
@@ -20,6 +21,9 @@ class API:
     def run(self, host: str = '0.0.0.0', port: int = 5000):
         import uvicorn
         uvicorn.run(self._app, host=host, port=port)
+
+    async def _ping(self) -> Response:
+        return Response(status_code=200)
 
     async def _generate(self, request: Request) -> StreamingResponse:
         if request.method == 'GET':
