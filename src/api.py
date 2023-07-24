@@ -63,6 +63,6 @@ class API:
 
             return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream', background=task)
 
-    async def _reset(self):
+    def _reset(self):
         with self._lock.gen_wlock():
             self._model.reset()
