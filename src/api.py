@@ -14,8 +14,6 @@ class API:
     def __init__(self, model: Model):
         self._model = model
         
-        self._lock = rwlock.RWLockWrite()
-        
         self._counter_lock = threading.Lock()
         self._stream_count = 0
 
@@ -37,50 +35,55 @@ class API:
         return Response(status_code=200)
 
     async def _generate(self, request: Request) -> StreamingResponse:
-        with self._lock.gen_rlock():
+        if self._is_resetting:
+            return HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Model is resetting")
+
+        with self._counter_lock:
+            self._stream_count += 1
+
+        if request.method == 'GET':
+            params = request.query_params
+            prompt = params.get('prompt')
+            args = GeneratorArgs(
+                temperature=params.get('temperature', GeneratorArgs.temperature),
+                top_k=params.get('top_k', GeneratorArgs.top_k),
+                top_p=params.get('top_p', GeneratorArgs.top_p),
+                max_tokens=params.get('max_tokens', GeneratorArgs.max_tokens)
+            )
+        elif request.method == 'POST':
+            body: dict = await request.json()
+            prompt = body.get('prompt')
+            args = GeneratorArgs(
+                temperature=body.get('temperature', GeneratorArgs.temperature),
+                top_k=body.get('top_k', GeneratorArgs.top_k),
+                top_p=body.get('top_p', GeneratorArgs.top_p),
+                max_tokens=body.get('max_tokens', GeneratorArgs.max_tokens)
+            )
+
+        if not prompt:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Prompt is required")
+
+        id = uuid.uuid4()
+        async def abort():
+            await self._model.abort(id)
+
+        task = BackgroundTask(abort)
+
+        try:
+            return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream', background=task)
+        finally:
             with self._counter_lock:
-                self._stream_count += 1
-
-            if request.method == 'GET':
-                params = request.query_params
-                prompt = params.get('prompt')
-                args = GeneratorArgs(
-                    temperature=params.get('temperature', GeneratorArgs.temperature),
-                    top_k=params.get('top_k', GeneratorArgs.top_k),
-                    top_p=params.get('top_p', GeneratorArgs.top_p),
-                    max_tokens=params.get('max_tokens', GeneratorArgs.max_tokens)
-                )
-            elif request.method == 'POST':
-                body: dict = await request.json()
-                prompt = body.get('prompt')
-                args = GeneratorArgs(
-                    temperature=body.get('temperature', GeneratorArgs.temperature),
-                    top_k=body.get('top_k', GeneratorArgs.top_k),
-                    top_p=body.get('top_p', GeneratorArgs.top_p),
-                    max_tokens=body.get('max_tokens', GeneratorArgs.max_tokens)
-                )
-
-            if not prompt:
-                raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Prompt is required")
-
-            id = uuid.uuid4()
-            async def abort():
-                await self._model.abort(id)
-
-            task = BackgroundTask(abort)
-
-            try:
-                return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream', background=task)
-            finally:
-                with self._counter_lock:
-                    self._stream_count -= 1
+                self._stream_count -= 1
 
     def _reset(self):
-        with self._lock.gen_wlock():
-            with self._counter_lock:
-                while self._stream_count > 0:
-                    pass
+        self._is_resetting = True
 
-            logger.info("Initiating model reset request")
-            self._model.reset()
-            logger.info("Finished model reset request")
+        with self._counter_lock:
+            while self._stream_count > 0:
+                pass
+
+        logger.info("Initiating model reset request")
+        self._model.reset()
+        logger.info("Finished model reset request")
+        
+        self._is_resetting = False
