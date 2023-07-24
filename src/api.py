@@ -1,6 +1,5 @@
 import uuid
-import threading
-from readerwriterlock import rwlock
+import aiorwlock
 from fastapi import APIRouter, FastAPI
 from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException
@@ -13,9 +12,8 @@ from .model import Model, GeneratorArgs
 class API:
     def __init__(self, model: Model):
         self._model = model
-        
-        self._counter_lock = threading.Lock()
-        self._stream_count = 0
+
+        self._lock = aiorwlock.RWLock()
 
         router = APIRouter()
         router.add_api_route('/', self._ping, methods=['POST', 'GET'])
@@ -25,8 +23,6 @@ class API:
         self._app = FastAPI()
         self._app.include_router(router)
 
-        self._is_resetting = False
-
     def run(self, host: str = '0.0.0.0', port: int = 5000):
         import uvicorn
         uvicorn.run(self._app, host=host, port=port)
@@ -35,56 +31,39 @@ class API:
         return Response(status_code=200)
 
     async def _generate(self, request: Request) -> StreamingResponse:
-        if self._is_resetting:
-            return HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Model is resetting")
+        with self._lock.reader_lock:
+            if request.method == 'GET':
+                params = request.query_params
+                prompt = params.get('prompt')
+                args = GeneratorArgs(
+                    temperature=params.get('temperature', GeneratorArgs.temperature),
+                    top_k=params.get('top_k', GeneratorArgs.top_k),
+                    top_p=params.get('top_p', GeneratorArgs.top_p),
+                    max_tokens=params.get('max_tokens', GeneratorArgs.max_tokens)
+                )
+            elif request.method == 'POST':
+                body: dict = await request.json()
+                prompt = body.get('prompt')
+                args = GeneratorArgs(
+                    temperature=body.get('temperature', GeneratorArgs.temperature),
+                    top_k=body.get('top_k', GeneratorArgs.top_k),
+                    top_p=body.get('top_p', GeneratorArgs.top_p),
+                    max_tokens=body.get('max_tokens', GeneratorArgs.max_tokens)
+                )
 
-        with self._counter_lock:
-            self._stream_count += 1
+            if not prompt:
+                raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Prompt is required")
 
-        if request.method == 'GET':
-            params = request.query_params
-            prompt = params.get('prompt')
-            args = GeneratorArgs(
-                temperature=params.get('temperature', GeneratorArgs.temperature),
-                top_k=params.get('top_k', GeneratorArgs.top_k),
-                top_p=params.get('top_p', GeneratorArgs.top_p),
-                max_tokens=params.get('max_tokens', GeneratorArgs.max_tokens)
-            )
-        elif request.method == 'POST':
-            body: dict = await request.json()
-            prompt = body.get('prompt')
-            args = GeneratorArgs(
-                temperature=body.get('temperature', GeneratorArgs.temperature),
-                top_k=body.get('top_k', GeneratorArgs.top_k),
-                top_p=body.get('top_p', GeneratorArgs.top_p),
-                max_tokens=body.get('max_tokens', GeneratorArgs.max_tokens)
-            )
+            id = uuid.uuid4()
+            async def abort():
+                await self._model.abort(id)
 
-        if not prompt:
-            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Prompt is required")
+            task = BackgroundTask(abort)
 
-        id = uuid.uuid4()
-        async def abort():
-            await self._model.abort(id)
-
-        task = BackgroundTask(abort)
-
-        async def generate():
-            yield self._model.generate(prompt, id, args)
-            with self._counter_lock:
-                self._stream_count -= 1
-
-        return StreamingResponse(generate(), media_type='text/event-stream', background=task)
+            return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream', background=task)
 
     def _reset(self):
-        self._is_resetting = True
-
-        with self._counter_lock:
-            while self._stream_count > 0:
-                pass
-
-        logger.info("Initiating model reset request")
-        self._model.reset()
-        logger.info("Finished model reset request")
-        
-        self._is_resetting = False
+        with self._lock.writer_lock:
+            logger.info("Initiating model reset request")
+            self._model.reset()
+            logger.info("Finished model reset request")
