@@ -1,6 +1,6 @@
 import requests
 
-url = 'https://localhost:8080/generate?prompt=hello'
+url = 'http://64.247.206.54:5000/generate'
 headers = {
     'Content-Type': 'application/json',
     'Accept': 'text/event-stream',
@@ -8,12 +8,12 @@ headers = {
     'Connection': 'keep-alive',
 }
 data = {
-    "prompt": "hey there"
+    "prompt": "Write an essay on the book 1989"
 }
 
 
 def print_sse_stream():
-    response = requests.post(url, stream=True, headers=headers)
+    response = requests.post(url, stream=True, headers=headers, json=data)
 
     print(response.status_code)
 

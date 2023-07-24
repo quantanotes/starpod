@@ -49,3 +49,6 @@ class ExLLama(Model):
 
     def abort(self, id: str):
         pass
+
+    def reset(self):
+        pass

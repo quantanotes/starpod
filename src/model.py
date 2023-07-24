@@ -15,10 +15,13 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    def generate(self, prompt: str, id: str, args: GeneratorArgs = GeneratorArgs()) -> Generator[str, None, None] | AsyncGenerator[str, None]:
+    async def generate(self, prompt: str, id: str, args: GeneratorArgs = GeneratorArgs()) -> Generator[str, None, None] | AsyncGenerator[str, None]:
         pass
 
     @abstractmethod
-    def abort(self, id: str) -> None:
+    async def abort(self, id: str) -> None:
         pass
-    
+
+    @abstractmethod
+    def reset(self) -> None:
+        pass
