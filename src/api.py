@@ -1,4 +1,5 @@
 import uuid
+import threading
 from readerwriterlock import rwlock
 from fastapi import APIRouter, FastAPI
 from starlette.background import BackgroundTask
@@ -12,7 +13,11 @@ from .model import Model, GeneratorArgs
 class API:
     def __init__(self, model: Model):
         self._model = model
+        
         self._lock = rwlock.RWLockWrite()
+        
+        self._counter_lock = threading.Lock()
+        self._stream_count = 0
 
         router = APIRouter()
         router.add_api_route('/', self._ping, methods=['POST', 'GET'])
@@ -33,6 +38,9 @@ class API:
 
     async def _generate(self, request: Request) -> StreamingResponse:
         with self._lock.gen_rlock():
+            with self._counter_lock:
+                self._stream_count += 1
+
             if request.method == 'GET':
                 params = request.query_params
                 prompt = params.get('prompt')
@@ -56,16 +64,23 @@ class API:
                 raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Prompt is required")
 
             id = uuid.uuid4()
-
             async def abort():
                 await self._model.abort(id)
 
             task = BackgroundTask(abort)
 
-            return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream', background=task)
+            try:
+                return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream', background=task)
+            finally:
+                with self._counter_lock:
+                    self._stream_count -= 1
 
     def _reset(self):
         with self._lock.gen_wlock():
-            logger.info("STARTING RESET")
+            with self._counter_lock:
+                while self._stream_count > 0:
+                    pass
+
+            logger.info("Initiating model reset request")
             self._model.reset()
-            logger.info("FINISHED RESET")
+            logger.info("Finished model reset request")
