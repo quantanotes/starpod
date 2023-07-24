@@ -6,6 +6,7 @@ from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import Response, StreamingResponse
 from starlette.status import HTTP_400_BAD_REQUEST
+from .logger import logger
 from .model import Model, GeneratorArgs
 
 class API:
@@ -65,4 +66,6 @@ class API:
 
     def _reset(self):
         with self._lock.gen_wlock():
+            logger.info("STARTING RESET")
             self._model.reset()
+            logger.info("FINISHED RESET")
