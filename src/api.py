@@ -74,7 +74,7 @@ class API:
             with self._counter_lock:
                 self._stream_count -= 1
 
-        return StreamingResponse(generate, media_type='text/event-stream', background=task)
+        return StreamingResponse(generate(), media_type='text/event-stream', background=task)
 
     def _reset(self):
         self._is_resetting = True
