@@ -32,7 +32,6 @@ class API:
 
     async def _generate(self, request: Request) -> StreamingResponse:
         with self._lock.gen_rlock():
-            self._lock.acquire(block=False)
             if request.method == 'GET':
                 params = request.query_params
                 prompt = params.get('prompt')
