@@ -64,6 +64,7 @@ class API:
         id = uuid.uuid4()
         async def abort():
             if not self._reloading: await self._model.abort(id)
+            else: self._streams = 0
         task = BackgroundTask(abort)
 
         async def generate():
