@@ -1,4 +1,5 @@
 import uuid
+import threading
 from fastapi import APIRouter, FastAPI
 from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException
@@ -7,13 +8,14 @@ from starlette.responses import Response, StreamingResponse
 from starlette.status import HTTP_400_BAD_REQUEST
 from .logger import logger
 from .model import Model, GeneratorArgs
-from .rwlock import RWLock
 
 class API:
     def __init__(self, model: Model):
         self._model = model
 
-        self._lock = RWLock()
+        self._resetting = False
+        self._stream_lock = threading.Lock()
+        self._streams = 0
 
         router = APIRouter()
         router.add_api_route('/', self._ping, methods=['POST', 'GET'])
@@ -31,6 +33,9 @@ class API:
         return Response(status_code=200)
 
     async def _generate(self, request: Request) -> StreamingResponse:
+        if self._resetting:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail='Model is resetting')
+
         if request.method == 'GET':
             params = request.query_params
             prompt = params.get('prompt')
@@ -51,7 +56,7 @@ class API:
             )
 
         if not prompt:
-            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Prompt is required")
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail='Prompt is required')
 
         id = uuid.uuid4()
         async def abort():
@@ -59,20 +64,21 @@ class API:
         task = BackgroundTask(abort)
 
         async def generate():
-            try:
-                self._lock.acquire_read()
-                async for data in self._model.generate(prompt, id, args):
-                    yield data
-            finally:
-                self._lock.release_read()
+            async for data in self._model.generate(prompt, id, args):
+                yield data
+            with self._stream_lock:
+               self._streams -= 1 
+
+        with self._streams_lock:
+            self._streams += 1
 
         return StreamingResponse(generate(), media_type='text/event-stream', background=task)
 
     async def _reset(self):
-        try:
-            self._lock.acquire_write()
-            logger.info("Initiating model reset request")
-            await self._model.reset()
-        finally:
-            logger.info("Finished model reset request")
-            self._lock.release_write()
+        self._resetting = True
+        while self._streams > 0:
+            pass 
+        logger.info('Initiating model reset request')
+        await self._model.reset()
+        logger.info('Finished model reset request')
+        self._resetting = False
