@@ -13,7 +13,7 @@ class RWLock:
             if self._readers == 1:
                 self._lock.acquire()
 
-    def acquire_release(self):
+    def release_read(self):
         assert self._readers > 0
         with self._count_lock:
             self._readers -= 1
