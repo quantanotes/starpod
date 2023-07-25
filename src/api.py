@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 import threading
 from fastapi import APIRouter, FastAPI
@@ -13,6 +14,7 @@ class API:
     def __init__(self, model: Model):
         self._model = model
 
+        self._reset_event = asyncio.Event() 
         self._resetting = False
         self._stream_lock = threading.Lock()
         self._streams = 0
@@ -67,7 +69,9 @@ class API:
             async for data in self._model.generate(prompt, id, args):
                 yield data
             with self._stream_lock:
-               self._streams -= 1 
+                self._streams -= 1
+                if self._streams == 0:
+                    self._reset_event.set()
 
         with self._stream_lock:
             self._streams += 1
@@ -77,7 +81,7 @@ class API:
     async def _reset(self):
         self._resetting = True
         while self._streams > 0:
-            pass 
+            await self._reset_event.wait()
         logger.info('Initiating model reset request')
         await self._model.reset()
         logger.info('Finished model reset request')
