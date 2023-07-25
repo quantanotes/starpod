@@ -69,6 +69,8 @@ class API:
     async def _reset(self):
         self._lock.acquire_read()
         logger.info("Initiating model reset request")
-        self._model.reset()
-        logger.info("Finished model reset request")
-        self._lock.release_write()
+        async def reset():
+            await self._model.reset()
+            logger.info("Finished model reset request")
+            self._lock.release_write()
+        reset()
