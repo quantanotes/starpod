@@ -59,7 +59,7 @@ class API:
         task = BackgroundTask(abort)
 
         async def generate():
-            async with self._acquire_read_lock():
+            async with self._lock.read_lock:
                 async for data in self._model.generate(prompt, id, args):
                     yield data
 
