@@ -15,6 +15,7 @@ class API:
         self._model = model
 
         self._reset_event = asyncio.Event() 
+        self._to_reset = False
         self._resetting = False
         self._stream_lock = threading.Lock()
         self._streams = 0
@@ -35,7 +36,7 @@ class API:
         return Response(status_code=200)
 
     async def _generate(self, request: Request) -> StreamingResponse:
-        if self._resetting:
+        if self._to_reset:
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail='Model is resetting')
 
         if request.method == 'GET':
@@ -62,7 +63,7 @@ class API:
 
         id = uuid.uuid4()
         async def abort():
-            await self._model.abort(id)
+            if not self._resetting: await self._model.abort(id)
         task = BackgroundTask(abort)
 
         async def generate():
@@ -79,10 +80,13 @@ class API:
         return StreamingResponse(generate(), media_type='text/event-stream', background=task)
 
     async def _reset(self):
-        self._resetting = True
+        self._to_reset = True
         while self._streams > 0:
             await self._reset_event.wait()
+
+        self._resetting = True
         logger.info('Initiating model reset request')
         await self._model.reset()
         logger.info('Finished model reset request')
-        self._resetting = False
+
+        self._resetting, self._to_reset = False
