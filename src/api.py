@@ -68,10 +68,8 @@ class API:
         return StreamingResponse(generate(), media_type='text/event-stream', background=task)
 
     async def _reset(self):
-        self._lock.acquire_read()
+        self._lock.acquire_write()
         logger.info("Initiating model reset request")
-        async def reset():
-            await self._model.reset()
-            logger.info("Finished model reset request")
-            self._lock.release_write()
-        asyncio.run(reset)
+        await self._model.reset()
+        logger.info("Finished model reset request")
+        self._lock.release_write()
