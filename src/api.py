@@ -69,7 +69,7 @@ class API:
             with self._stream_lock:
                self._streams -= 1 
 
-        with self._streams_lock:
+        with self._stream_lock:
             self._streams += 1
 
         return StreamingResponse(generate(), media_type='text/event-stream', background=task)
