@@ -1,4 +1,4 @@
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 import threading
 
 class RWLock:
@@ -26,7 +26,7 @@ class RWLock:
     def release_write(self):
         self._lock.release()
 
-    @contextmanager
+    @asynccontextmanager
     def read_lock(self):
         self.acquire_read()
         try:
@@ -34,7 +34,7 @@ class RWLock:
         finally:
             self.acquire_release()
 
-    @contextmanager
+    @asynccontextmanager
     def write_lock(self):
         self.acquire_write()
         try:
