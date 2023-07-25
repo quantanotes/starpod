@@ -59,9 +59,10 @@ class API:
         task = BackgroundTask(abort)
 
         async def generate():
-            with self._lock.read_lock:
-                async for data in self._model.generate(prompt, id, args):
-                    yield data
+            self._lock.acquire_read()
+            async for data in self._model.generate(prompt, id, args):
+                yield data
+            self._lock.release_write()
 
         return StreamingResponse(generate(), media_type='text/event-stream', background=task)
 
