@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 from libs.vllm.vllm.engine.arg_utils import AsyncEngineArgs
 from libs.vllm.vllm.engine.async_llm_engine import AsyncLLMEngine
 from libs.vllm.vllm import SamplingParams
+from libs.vllm.vllm.model_executor.parallel_utils.parallel_state import destroy_model_parallel
 from src.model import Model, GeneratorArgs
 
 class VLLM(Model):
@@ -29,4 +30,5 @@ class VLLM(Model):
         gc.collect()
         torch.cuda.empty_cache()
         torch.distributed.destroy_process_group()
+        destroy_model_parallel
         self._engine = AsyncLLMEngine.from_engine_args(self._args)
