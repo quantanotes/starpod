@@ -62,12 +62,13 @@ class API:
             self._lock.acquire_read()
             async for data in self._model.generate(prompt, id, args):
                 yield data
-            self._lock.release_write()
+            self._lock.release_read()
 
         return StreamingResponse(generate(), media_type='text/event-stream', background=task)
 
-    def _reset(self):
-        with self._lock.write_lock:
-            logger.info("Initiating model reset request")
-            self._model.reset()
-            logger.info("Finished model reset request")
+    async def _reset(self):
+        self._lock.acquire_read()
+        logger.info("Initiating model reset request")
+        self._model.reset()
+        logger.info("Finished model reset request")
+        self._lock.release_write()

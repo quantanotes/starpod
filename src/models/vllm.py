@@ -24,7 +24,7 @@ class VLLM(Model):
     async def abort(self, id: str):
         await self._engine.abort(id)
 
-    def reset(self):
+    async def reset(self):
         self._engine = None
         gc.collect()
         torch.cuda.empty_cache()
