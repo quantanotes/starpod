@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 from fastapi import APIRouter, FastAPI
 from starlette.background import BackgroundTask
@@ -60,16 +59,20 @@ class API:
         task = BackgroundTask(abort)
 
         async def generate():
-            self._lock.acquire_read()
-            async for data in self._model.generate(prompt, id, args):
-                yield data
-            self._lock.release_read()
+            try:
+                self._lock.acquire_read()
+                async for data in self._model.generate(prompt, id, args):
+                    yield data
+            finally:
+                self._lock.release_read()
 
         return StreamingResponse(generate(), media_type='text/event-stream', background=task)
 
     async def _reset(self):
-        self._lock.acquire_write()
-        logger.info("Initiating model reset request")
-        await self._model.reset()
-        logger.info("Finished model reset request")
-        self._lock.release_write()
+        try:
+            self._lock.acquire_write()
+            logger.info("Initiating model reset request")
+            await self._model.reset()
+        finally:
+            logger.info("Finished model reset request")
+            self._lock.release_write()
