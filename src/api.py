@@ -88,7 +88,7 @@ class API:
 
         self._reloading = True
         logger.info('Initiating model reload request')
-        await self._model.reload()
+        self._model.reload()
         logger.info('Finished model reload request')
 
         self._reloading, self._to_reload = False
