@@ -23,5 +23,5 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    async def reset(self) -> None:
+    async def reload(self) -> None:
         pass

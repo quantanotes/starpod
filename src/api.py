@@ -15,15 +15,15 @@ class API:
         self._model = model
 
         self._reset_event = asyncio.Event() 
-        self._to_reset = False
-        self._resetting = False
+        self._to_reload = False
+        self._reloading = False
         self._stream_lock = threading.Lock()
         self._streams = 0
 
         router = APIRouter()
         router.add_api_route('/', self._ping, methods=['POST', 'GET'])
         router.add_api_route('/generate', self._generate, methods=['POST', 'GET'])
-        router.add_api_route('/reset', self._reset, methods=['POST', 'GET'])
+        router.add_api_route('/reload', self._reload, methods=['POST', 'GET'])
 
         self._app = FastAPI()
         self._app.include_router(router)
@@ -36,7 +36,7 @@ class API:
         return Response(status_code=200)
 
     async def _generate(self, request: Request) -> StreamingResponse:
-        if self._to_reset:
+        if self._to_reload:
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail='Model is resetting')
 
         if request.method == 'GET':
@@ -63,7 +63,7 @@ class API:
 
         id = uuid.uuid4()
         async def abort():
-            if not self._resetting: await self._model.abort(id)
+            if not self._reloading: await self._model.abort(id)
         task = BackgroundTask(abort)
 
         async def generate():
@@ -79,14 +79,14 @@ class API:
 
         return StreamingResponse(generate(), media_type='text/event-stream', background=task)
 
-    async def _reset(self):
-        self._to_reset = True
+    async def _reload(self):
+        self._to_reload = True
         while self._streams > 0:
             await self._reset_event.wait()
 
-        self._resetting = True
-        logger.info('Initiating model reset request')
-        await self._model.reset()
-        logger.info('Finished model reset request')
+        self._reloading = True
+        logger.info('Initiating model reload request')
+        await self._model.reload()
+        logger.info('Finished model reload request')
 
-        self._resetting, self._to_reset = False
+        self._reloading, self._to_reload = False
