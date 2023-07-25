@@ -68,7 +68,7 @@ class API:
 
         async def generate():
             async for data in self._model.generate(prompt, id, args):
-                if self._reloading:
+                if self._to_reload:
                     break
                 yield data
             with self._stream_lock:
