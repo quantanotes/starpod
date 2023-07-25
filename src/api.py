@@ -1,5 +1,4 @@
 import uuid
-import aiorwlock
 from fastapi import APIRouter, FastAPI
 from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException
@@ -8,12 +7,13 @@ from starlette.responses import Response, StreamingResponse
 from starlette.status import HTTP_400_BAD_REQUEST
 from .logger import logger
 from .model import Model, GeneratorArgs
+from .rwlock import RWLock
 
 class API:
     def __init__(self, model: Model):
         self._model = model
 
-        self._lock = aiorwlock.RWLock()
+        self._lock = RWLock()
 
         router = APIRouter()
         router.add_api_route('/', self._ping, methods=['POST', 'GET'])
@@ -31,39 +31,42 @@ class API:
         return Response(status_code=200)
 
     async def _generate(self, request: Request) -> StreamingResponse:
-        with self._lock.reader_lock:
-            if request.method == 'GET':
-                params = request.query_params
-                prompt = params.get('prompt')
-                args = GeneratorArgs(
-                    temperature=params.get('temperature', GeneratorArgs.temperature),
-                    top_k=params.get('top_k', GeneratorArgs.top_k),
-                    top_p=params.get('top_p', GeneratorArgs.top_p),
-                    max_tokens=params.get('max_tokens', GeneratorArgs.max_tokens)
-                )
-            elif request.method == 'POST':
-                body: dict = await request.json()
-                prompt = body.get('prompt')
-                args = GeneratorArgs(
-                    temperature=body.get('temperature', GeneratorArgs.temperature),
-                    top_k=body.get('top_k', GeneratorArgs.top_k),
-                    top_p=body.get('top_p', GeneratorArgs.top_p),
-                    max_tokens=body.get('max_tokens', GeneratorArgs.max_tokens)
-                )
+        if request.method == 'GET':
+            params = request.query_params
+            prompt = params.get('prompt')
+            args = GeneratorArgs(
+                temperature=params.get('temperature', GeneratorArgs.temperature),
+                top_k=params.get('top_k', GeneratorArgs.top_k),
+                top_p=params.get('top_p', GeneratorArgs.top_p),
+                max_tokens=params.get('max_tokens', GeneratorArgs.max_tokens)
+            )
+        elif request.method == 'POST':
+            body: dict = await request.json()
+            prompt = body.get('prompt')
+            args = GeneratorArgs(
+                temperature=body.get('temperature', GeneratorArgs.temperature),
+                top_k=body.get('top_k', GeneratorArgs.top_k),
+                top_p=body.get('top_p', GeneratorArgs.top_p),
+                max_tokens=body.get('max_tokens', GeneratorArgs.max_tokens)
+            )
 
-            if not prompt:
-                raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Prompt is required")
+        if not prompt:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Prompt is required")
 
-            id = uuid.uuid4()
-            async def abort():
-                await self._model.abort(id)
+        id = uuid.uuid4()
+        async def abort():
+            await self._model.abort(id)
+        task = BackgroundTask(abort)
 
-            task = BackgroundTask(abort)
+        async def generate():
+            async with self._acquire_read_lock():
+                async for data in self._model.generate(prompt, id, args):
+                    yield data
 
-            return StreamingResponse(self._model.generate(prompt, id, args), media_type='text/event-stream', background=task)
+        return StreamingResponse(generate(), media_type='text/event-stream', background=task)
 
     def _reset(self):
-        with self._lock.writer_lock:
+        with self._lock.write_lock:
             logger.info("Initiating model reset request")
             self._model.reset()
             logger.info("Finished model reset request")
