@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from fastapi import APIRouter, FastAPI
 from starlette.background import BackgroundTask
@@ -73,4 +74,4 @@ class API:
             await self._model.reset()
             logger.info("Finished model reset request")
             self._lock.release_write()
-        reset()
+        asyncio.run(reset)
