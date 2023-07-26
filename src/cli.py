@@ -42,10 +42,10 @@ class CLI:
                 from .models.test_model import TestModel
                 model = TestModel(full_dir)
             case 'exllama':
-                from .models.exllama import ExLLama
+                from .models.exllama_model import ExLLama
                 model = ExLLama(full_dir)
             case 'vllm':
-                from .models.vllm import VLLM
+                from .models.vllm_model import VLLM
                 model = VLLM(dir, weights)
             case _:
                 logger.error(f'No model named {args.model}')

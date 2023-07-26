@@ -26,9 +26,9 @@ class VLLM(Model):
         await self._engine.abort(id)
 
     def reload(self):
-        self._engine = None
-        gc.collect()
-        torch.cuda.empty_cache()
+        del self._engine
         torch.distributed.destroy_process_group()
         destroy_model_parallel()
+        gc.collect()
+        torch.cuda.empty_cache()
         self._engine = AsyncLLMEngine.from_engine_args(self._args)
