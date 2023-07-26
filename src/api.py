@@ -23,7 +23,7 @@ class API:
         router = APIRouter()
         router.add_api_route('/', self._ping, methods=['POST', 'GET'])
         router.add_api_route('/generate', self._generate, methods=['POST', 'GET'])
-        router.add_api_route('/reload', self._reload, methods=['POST', 'GET'])
+        # router.add_api_route('/reload', self._reload, methods=['POST', 'GET'])
 
         self._app = FastAPI()
         self._app.include_router(router)

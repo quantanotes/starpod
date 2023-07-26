@@ -15,6 +15,7 @@ class CLI:
         run_parser = subparsers.add_parser('run', help='Run a pod')
         run_parser.add_argument('model', type=str, help='Model name')
         run_parser.add_argument('weights', type=str, help='Weights')
+        run_parser.add_argument('tensor_parallel', type=int, required=False, default=1)
 
         download_parser = subparsers.add_parser('download', help='Download weights from hugging face')
         download_parser.add_argument('name', help='Name of the hugging face repo to download from')
@@ -37,6 +38,8 @@ class CLI:
             logger.error(f'Weights {weights} are not installed')
             return
 
+        tensor_parallel = args.tensor_parallel
+
         match args.model:
             case 'test':
                 from .models.test_model import TestModel
@@ -46,7 +49,7 @@ class CLI:
                 model = ExLLama(full_dir)
             case 'vllm':
                 from .models.vllm_model import VLLM
-                model = VLLM(dir, weights)
+                model = VLLM(dir, weights, tensor_parallel)
             case _:
                 logger.error(f'No model named {args.model}')
 
