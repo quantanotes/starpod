@@ -31,4 +31,5 @@ class VLLM(Model):
         destroy_model_parallel()
         gc.collect()
         torch.cuda.empty_cache()
+        torch.cuda.synchronize()
         self._engine = AsyncLLMEngine.from_engine_args(self._args)
