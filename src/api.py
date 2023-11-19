@@ -1,6 +1,4 @@
-import asyncio
 import uuid
-import threading
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.background import BackgroundTask
@@ -17,18 +15,16 @@ class API:
 
         router = APIRouter()
         router.add_api_route('/', self._ping, methods=['POST', 'GET'])
-        router.add_api_route('/generate', self._generate,
-                             methods=['POST', 'GET'])
-        # router.add_api_route('/reload', self._reload, methods=['POST', 'GET'])
+        router.add_api_route('/generate', self._generate, methods=['POST', 'GET'])
 
         self._app = FastAPI()
         self._app.include_router(router)
         self._app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
+            allow_origins=['*'],
             allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
+            allow_methods=['*'],
+            allow_headers=['*'],
         )
 
     def run(self, host: str = '0.0.0.0', port: int = 5000):
@@ -41,34 +37,26 @@ class API:
     async def _generate(self, request: Request) -> StreamingResponse:
         if request.method == 'GET':
             params = request.query_params
-            prompt = params.get('prompt')
-            args = GeneratorArgs(
-                temperature=params.get(
-                    'temperature', GeneratorArgs.temperature),
-                top_k=params.get('top_k', GeneratorArgs.top_k),
-                top_p=params.get('top_p', GeneratorArgs.top_p),
-                max_tokens=params.get('max_tokens', GeneratorArgs.max_tokens)
-            )
         elif request.method == 'POST':
-            body: dict = await request.json()
-            prompt = body.get('prompt')
-            args = GeneratorArgs(
-                temperature=body.get('temperature', GeneratorArgs.temperature),
-                top_k=body.get('top_k', GeneratorArgs.top_k),
-                top_p=body.get('top_p', GeneratorArgs.top_p),
-                max_tokens=body.get('max_tokens', GeneratorArgs.max_tokens)
-            )
+            params = await request.json()
 
-        if not prompt:
+        prompt = params.get('prompt')
+        args = GeneratorArgs(
+            temperature=float(params.get('temperature', GeneratorArgs.temperature)),
+            top_k=float(params.get('top_k', GeneratorArgs.top_k)),
+            top_p=float(params.get('top_p', GeneratorArgs.top_p)),
+            max_tokens=int(params.get('max_tokens', GeneratorArgs.max_tokens))
+        )
+
+        if prompt is None:
             raise HTTPException(
                 status_code=HTTP_400_BAD_REQUEST, detail='Prompt is required')
 
         id = uuid.uuid4()
-
         async def abort():
-                await self._model.abort(id)
-        task = BackgroundTask(abort)
+            await self._model.abort(id)
 
+        task = BackgroundTask(abort)
         async def generate():
             async for data in self._model.generate(prompt, id, args):
                 yield data

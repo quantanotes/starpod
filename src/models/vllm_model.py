@@ -1,5 +1,5 @@
 import gc
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 import torch
 from vllm import SamplingParams
 from vllm.engine.arg_utils import AsyncEngineArgs
@@ -8,8 +8,8 @@ from vllm.model_executor.parallel_utils.parallel_state import destroy_model_para
 from src.model import Model, GeneratorArgs
 
 class VLLM(Model):
-    def __init__(self, dir: str, weights: str, tensor_parallel: int = 1):
-        self._args = AsyncEngineArgs(weights, download_dir=dir, tensor_parallel_size=tensor_parallel)
+    def __init__(self, dir: str, weights: str, tensor_parallel: int = 1, quantisation: Optional[None] = None):
+        self._args = AsyncEngineArgs(weights, download_dir=dir, tensor_parallel_size=tensor_parallel, quantization=quantisation)
         self._engine = AsyncLLMEngine.from_engine_args(self._args)
 
     async def generate(self, prompt: str, id: str, args: GeneratorArgs = GeneratorArgs()) -> AsyncGenerator[str, None]:

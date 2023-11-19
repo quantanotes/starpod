@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 import argparse
 from .download import download
 from .logger import logger
@@ -16,6 +17,7 @@ class CLI:
         run_parser.add_argument('model', type=str, help='Model name')
         run_parser.add_argument('weights', type=str, help='Weights')
         run_parser.add_argument('--tensor_parallel', '--tp', type=int, default=1)
+        run_parser.add_argument('--quantisation', '--q', type=Optional[str], default=None)
 
         download_parser = subparsers.add_parser('download', help='Download weights from hugging face')
         download_parser.add_argument('name', help='Name of the hugging face repo to download from')
@@ -39,6 +41,7 @@ class CLI:
             return
 
         tensor_parallel = args.tensor_parallel
+        quantisation = args.quantisation
 
         match args.model:
             case 'test':
@@ -49,7 +52,7 @@ class CLI:
                 model = ExLLama(full_dir)
             case 'vllm':
                 from .models.vllm_model import VLLM
-                model = VLLM(dir, weights, tensor_parallel)
+                model = VLLM(dir, weights, tensor_parallel, quantisation)
             case _:
                 logger.error(f'No model named {args.model}')
 
