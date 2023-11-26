@@ -17,7 +17,7 @@ class CLI:
         run_parser.add_argument('model', type=str, help='Model name')
         run_parser.add_argument('weights', type=str, help='Weights')
         run_parser.add_argument('--tensor_parallel', '--tp', type=int, default=1)
-        run_parser.add_argument('--quantisation', '--q', type=Optional[str], default=None)
+        run_parser.add_argument('--quantisation', '--q', type=str, default=None)
 
         download_parser = subparsers.add_parser('download', help='Download weights from hugging face')
         download_parser.add_argument('name', help='Name of the hugging face repo to download from')
